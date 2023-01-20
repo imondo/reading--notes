@@ -443,3 +443,19 @@ console.log(b)
 var _Array$from = _interopDefault(require('@babel/runtime-corejs2/core-js/array/from'));
 var b = _Array$from('abc');
 ```
+
+## 完整方案
+
+库的开发者与库的使用者之间的矛盾
+
+- 库开发者编写 ES6 新特性
+
+- 库使用者能够在各种浏览器（IE6 ～ IE11）和 Node.js 中运行
+
+- 库使用者能使用 AMD，CommonJS，ES Module 模块规范
+
+- 库使用者能使用 webpack，rollup.js 等打包工具
+
+完整编译与打包流程和入口文件环境总结
+
+![打包.png](../../assets/打包.png)
