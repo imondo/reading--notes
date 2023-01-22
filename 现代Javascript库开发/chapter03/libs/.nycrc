@@ -1,0 +1,11 @@
+{
+    "reporter": ["html", "text"],
+    "require": ["@babel/register"],
+    "sourceMap": false,
+    "instrument": false,
+    "check-coverage": true,
+    "lines": 75,
+    "statements": 75,
+    "functions": 75,
+    "branches": 75
+}
