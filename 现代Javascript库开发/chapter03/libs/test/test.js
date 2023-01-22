@@ -1,6 +1,6 @@
 const expect = require('expect.js')
 // const clone = require('../dist/index.js').clone
-const clone = require('../src/index').clone
+const clone = require('../src/index.js').clone
 
 describe('单元测试', () => {
     describe('test hello', () => {
@@ -38,6 +38,26 @@ describe('func clone', () => {
             expect(clone(undefined)).to.equal(undefined)
             expect(clone(null)).to.equal(null)
         })
+    })
+})
+
+function getUrlParam(key) {
+    const query = location.search[0] === '?' ? location.search.slice(1) : location.search
+
+    const map = query.split('&').reduce((data, k) => {
+        const arr = k.split('=')
+        data[arr[0]] = arr[1]
+        return data;
+    }, {})
+    return map[key];
+}
+
+const JSDOM = require('mocha-jsdom')
+
+describe('获取当前URL中参数', () => {
+    JSDOM({ url: 'https://imondo.cn?a=1' })
+    it('参数(id)的值', () => {
+        expect(getUrlParam('a')).to.be.equal('1')
     })
 })
 

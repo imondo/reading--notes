@@ -287,7 +287,7 @@ All files |      100 |     87.5 |      100 |      100 |                   |
 ----------|----------|----------|----------|----------|-------------------|
 ```
 
-一般不要求 100% 覆盖率，可以将阀值跳至 75% ，这时测试就不会报错了
+一般不要求 100% 覆盖率，可以将阀值调至 75% ，这时测试就不会报错了
 
 ```bash
   func clone
@@ -307,4 +307,172 @@ All files |      100 |     87.5 |      100 |      100 |                   |
 ----------|----------|----------|----------|----------|-------------------|
 ```
 
+## 浏览器环境测试
 
+### 模拟浏览器环境
+
+jsdom：提供对 DOM 和 BOM 模拟
+
+```bash
+npm i mocha-jsdom -D
+```
+
+对 getUrlParam 函数的测试
+
+```js
+const JSDOM = require('mocha-jsdom')
+
+function getUrlParam(key) {
+    const query = location.search[0] === '?' ? location.search.slice(1) : location.search
+
+    const map = query.split('&').reduce((data, k) => {
+        const arr = k.split('=')
+        data[arr[0]] = arr[1]
+        return data;
+    }, {})
+    return map[key];
+}
+
+describe('获取当前URL中参数', () => {
+    JSDOM({ url: 'https://imondo.cn?a=1' })
+    it('参数(id)的值', () => {
+        expect(getUrlParam('a')).to.be.equal('1')
+    })
+}) 
+```
+
+### 真实的浏览器测试
+
+`Mocha` 支持在浏览器环境中运行。
+
+- `test` 目录添加 `browser/index.html`
+
+- 添加代码
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mocha</title>
+    <link rel="stylesheet" href="../../node_modules/mocha/mocha.css">
+</head>
+<body>
+    <div id="mocha"></div>
+    <script src="../../node_modules/mocha/mocha.js"></script>
+    <script src="../../node_modules/expect.js/index.js"></script>
+    <script src="../../dist/index.aio.js"></script>
+    <script>
+        var libs = {
+            'expect.js': expect,
+            '../src/index.js': window['clone']
+        }
+        var require = function(path) {
+            return libs[path]
+        }
+    </script>
+    <script>
+        mocha.setup('bdd')
+    </script>
+    <script src="../test.js"></script>
+    <script>
+        mocha.run()
+    </script>
+</body>
+</html>
+```
+
+打开页面可以看到测试结果
+
+![浏览器测试](../../assets/mocha.png)
+
+### 自动化测试
+
+`PhantomJS` 失去维护
+
+流行使用 `Chrome` 的 `Headless` 特性，支持通过命令启动一个没有界面的进程来执行，除了没有界面，和真实浏览器没有差异。
+
+使用 `Puppeteer` 工具
+
+```bash
+npm i puppeteer@5.5.0 -D
+```
+
+- 添加 `test/browser/puppeteer.js`
+
+- 添加代码
+
+```js
+const puppeteer = require('puppeteer')
+
+;(async () => {
+    const testPath = `file://${__dirname}/index.html`
+
+    const browser = await puppeteer.launch()
+
+    const page = await browser.newPage()
+
+    await page.goto(testPath)
+
+    // 截图保存
+    const pngPath = `${__dirname}/browser.png`
+
+    await page.screenshot({
+        path: pngPath,
+        fullPage: true
+    })
+
+    await browser.close()
+})()
+```
+
+运行 `node test/browser/puppeteer.js` 可以看到生成截图 `browser.png`
+
+![browser](./libs/test/browser/browser.png)
+
+- 运行成功的用例 `class` 存在 `pass`
+
+- 运行失败的用例 `class` 存在 `fail`
+
+获取通过和失败的 `class` 数量，可以验证结果。修改 `puppeteer.js` 文件
+
+```js
+    // ...
+    await page.screenshot({
+        path: pngPath,
+        fullPage: true
+    })
+
+    // 获取数量
+    await page.waitFor('.suite')
+    // 通过
+    const passNode = await page.$$('.pass')
+    // 失败
+    const errNode = await page.$$('.fail')
+
+    if (passNode && passNode.length) {
+        console.log(`通过 ${passNode.length} 项`)
+    }
+
+    if (errNode && errNode.length) {
+        console.log(`失败 ${errNode.length} 项`)
+        await browser.close()
+        process.exit(1)
+    }
+
+    await browser.close()
+```
+
+修改 package.json 命令
+
+```json
+{
+    "scripts": {
+        "test:puppeteer": "node test/browser/puppeteer.js",
+    }
+}
+```
+
+运行查看结果
