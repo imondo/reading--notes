@@ -556,3 +556,220 @@ npx standard-version --dry-run
 4. 添加 `Git Tag`
 
 ## 持续集成
+
+持续集成（Continuous Integration, CI）是一种软件开发实践。
+
+### GitHub Actions
+
+`GitHub` 官方提供的自动化服务。
+
+- 和 `GitHub` 集成更容易
+
+- 支持复用其他人的脚本片段
+
+点击 `Actions` 选项，单击 `New workflow` 按钮。
+
+也可以在根目录添加 `.github/workflow/ci.yml` 文件
+
+```yml
+name: Node.js CI
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [12.x, 14.x, 16.x]
+        steps:
+            - uses: actions/checkout@v2
+            - name: Use Node.js ${{ matrix.node-version }}
+              uses: actions/steup-node@v2
+              with:
+                node-version: ${{ matrix.node-version }}
+                cache: 'npm'
+            - run: npm ci
+            - run: npm run build --if-present
+            - run: npm test
+```
+
+以上配置会在 Node.js 12、14、16 版本上执行
+
+- 克隆仓库
+
+- 安装 `Node.js` 环境
+
+- 安装 `npm` 依赖
+
+- 执行 `npm run build` 命令
+
+- 执行 `npm test` 命令
+
+GitHub Actions 包含 4 个基础概念
+
+- workflow
+
+- job
+
+- step
+
+- action
+
+一个开源库可能存在 3 个 `workflow` 过程配置
+
+```bash
+.github
+    - workflow
+        - ci.yml # 校验
+        - publish.yml # 发包
+        - deploy.yml # 部署文档
+```
+
+常用的配置字段
+
+```yml
+# workflow 名称
+name: ci
+# 指定触发 workflow 的条件
+on:
+    push:
+        branches: [master] # 限定分支
+    pull_request:
+        branches: [master]
+```
+
+`workflow` 可以包含多个 `job`，多个 `job` 默认是并发执行的。可以使用 `needs` 指定 `job` 之间的依赖关系。
+
+```yml
+jobs:
+    lint:
+        runs-on: ubuntu-lastest # 指定运行环境
+    test:
+        needs: lint # 依赖关系
+        runs-on: ubuntu-latest
+        strategx:
+            matrix:
+                node-version: [12.x, 14.x, 16.x] # 指定多个版本都执行
+```
+
+`job` 中具体执行由 `step` 指定，一个 `job` 可以包含多个 `step`。`step` 中运行的命令叫做 `action`。
+
+```yml
+steps:
+    - name: test # step 名称
+    env: # 环境变量
+        PROD: 1
+    run: echo $PROD
+```
+
+### CircleCI
+
+第三方持续集成/持续部署服务。开源项目可以免费使用。
+
+### Travis CI
+
+社区的第三方工具，已经不免费了。
+
+## 分支模型
+
+良好的分支管理可以避免很多不必要的麻烦。
+
+### 主分支
+
+主分支是开源项目稳定版本，应包含稳定，没有 Bug 的代码，并保持随时可以发布的状态。
+
+理论上，主分支只包含合并提交，所有迭代应该都在分支上进行。不过简单的改动，可直接修改；而功能较复杂，多次提交，则不推荐在主分支上修改。
+
+### 功能分支
+
+有新功能时，切出一个功能分支。
+
+```bash
+git checkout -b feature/a
+```
+
+开发完成后，需要合并回主分支
+
+```bash
+git merge feature/a # 快速合并
+git merge --no-ff feature/a # 非快速合并
+```
+
+如果在创建当前功能分支后，主分支可能有新的提交。
+
+在合并之前，建议先将主分支新的提交合并到当前分支。有两种策略选择：
+
+- 合并
+
+- 变基
+
+合并操作简单，变基操作的提交记录更清晰。开源库推荐变基操作。
+
+合并操作
+
+```bash
+git merge master
+git checkout master
+git merge feature/a
+```
+
+变基操作
+
+```bash
+git rebase master
+git checkout master
+git merge feature/a
+```
+
+### 故障分支
+
+修复 Bug 的分支。
+
+```bash
+git checkout -b bugfix/b
+```
+
+在验证没有问题后，需要合并回主分支，并在主分支上发布新的补丁版本。
+
+```bash
+git checkout master
+git merge --no-ff bugfix/b
+# 测试 构建 打标签 发布
+```
+
+主分支更新后，下游的公共分支要及时同步变更，建议使用**变基操作**进行同步。
+
+```bash
+git checkout feature/a
+git rebase master
+```
+
+### pull request
+
+其他人给开源项目提交代码合并
+
+### 标签与历史
+
+每次发布新版本都要添加 Git 标签，版本号需要符合语义化规范
+
+```bash
+git tag 1.1.1
+git tag 1.2.0
+
+#或
+
+git tag v1.1.1
+git tag v1.2.0
+```
+
+假设最新版本是 v1.2.0，反馈 v1.0.0 版本存在 Bug。
+
+历史版本可以基于标签新建一个版本分支，在版本分支上修复 Bug。需要注意，**历史版本分支不需要再次合并回主分支**。
+
+```bash
+git checkout -b v1.0.x v1.0.0
+```
