@@ -1,0 +1,58 @@
+{
+  "name": "libs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "sideEffects": false,
+  "scripts": {
+    "build:cjs": "npx rollup -c config/rollup.config.js",
+    "build:esm": "npx rollup -c config/rollup.config.esm.js",
+    "build:aio": "npx rollup -c config/rollup.config.aio.js",
+    "build": "npm run build:cjs && npm run build:esm && npm run build:aio",
+    "test:nyc": "nyc mocha",
+    "test:nyc:cro": "cross-env NODE_ENV=test nyc mocha",
+    "test:puppeteer": "node test/browser/puppeteer.js",
+    "test": "mocha",
+    "prepare": "husky install",
+    "lint": "eslint src config test",
+    "ci": "git commit",
+    "cz": "git-cz"
+  },
+  "config": {
+    "commitizen": {
+      "path": "@commitlint/cz-commitlint"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/runtime-corejs2": "^7.20.7",
+    "rollup": "^0.60.0",
+    "rollup-plugin-node-resolve": "^3.0.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.1.2",
+    "@babel/plugin-transform-runtime": "^7.19.6",
+    "@babel/preset-env": "^7.1.0",
+    "@babel/register": "^7.0.0",
+    "@commitlint/cli": "^17.4.2",
+    "@commitlint/config-conventional": "^17.4.2",
+    "@commitlint/cz-commitlint": "^17.4.2",
+    "@commitlint/prompt-cli": "^17.4.2",
+    "babel-plugin-istanbul": "^5.1.0",
+    "commitizen": "^4.3.0",
+    "cross-env": "^5.2.0",
+    "eslint": "^8.32.0",
+    "expect.js": "^0.3.1",
+    "husky": "^8.0.0",
+    "mocha": "^3.5.3",
+    "mocha-jsdom": "^2.0.0",
+    "nyc": "^13.1.0",
+    "puppeteer": "^5.5.0",
+    "rollup-plugin-babel": "^4.0.3",
+    "rollup-plugin-commonjs": "^8.3.0",
+    "standard-version": "^9.5.0"
+  }
+}
