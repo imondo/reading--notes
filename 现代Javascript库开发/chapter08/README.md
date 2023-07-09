@@ -1032,4 +1032,277 @@ export function middlewareNaN() {
         return next(value, other);
     }
 }
+
+const a1 = { a: NaN }
+const a2 = { a: NaN }
+
+isEqual(a1, a2) // false
+isEqual(a1, a2, middlewareNaN()) // true
+```
+
+比较函数
+
+```js
+export function middlewareFunc() {
+    return next => (value, other) => {
+        if (typeof value === 'function' && typeof other === 'function') {
+            return value.toString() === other.toString();
+            
+        }
+        return next(value, other);
+    }
+}
+
+const a1 = { a: function() {} };
+const a2 = { a: function() {} };
+
+isEqual(a1, a2); // false
+isEqual(a1, a2, middlewareFunc()); // false
+```
+
+如果需要同时使用两个中间件呢？
+
+```js
+const a1 = { a: function() {}, b: NaN };
+const a2 = { a: function() {}, b: NaN };
+
+isEqual(a1, a2);
+isEqual(a1, a2, next => middlewareFunc(middlewareNaN())(next)) // true
+```
+
+当中间件多了，这种嵌套不适用，这里使用前面的 `compose` 函数串起来。
+
+```js
+// ...
+isEqual(a1, a2, compose(middlewareFunc(), middlewareNaN())); // true
+```
+
+## 参数扩展
+
+- 可选参数
+
+- 必选参数
+
+ES5 以前不支持函数参数默认值，函数内部处理
+
+```js
+function laftpad(str, len, char) {
+    len = len || 2;
+    char = char || '0';
+}
+```
+
+如果存在*假值*或运算符存在问题。
+
+假值：
+
+- 空字符串
+
+- 0
+
+- undefined
+
+- null
+
+ES5 的默认参数最优选择
+
+```js
+function laftpad(str, len = 2, char = '0') {}
+
+function laftpad(str, opt) {
+    opt = Object.assign({ len: 2, char: '0' }, opt);
+    // or
+    // opt = { len: 2, char: '0', ...opt };
+}
+
+function laftpad(str, { len = 2, char = '0' }) {}
+```
+
+但是当存在多层数据参数时，不能很好的保存默认值
+
+```js
+function laftpad(str, { len = { min = 1, max = 10 }, char = '0' }) {}
+
+laftpad('a', { len: { max: 5 } }) // min 会被覆盖掉
+```
+
+### 设计函数
+
+设计一个支持合并的函数
+
+```js
+function extend(defaultOpt, customOpt) {
+    // todo
+}
+
+extend({ len: { min: 1, max: 10 } }, { len: { max: 5 } })
+```
+
+遍历 `customOpt` 将每个属性合并到 `defaultOpt` 上，如果属性值是对象的话，则递归合并过程
+
+```js
+import type form '@type';
+function hasOwnProp(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+export function extend(defaultOpt, customOpt) {
+    for (let name in customOpt) {
+        const src = defaultOpt[name];
+        const copy = customOpt[name];
+
+        if (!hasOwnPorp(customOpt, name)) {
+            continue;
+        }
+
+        if (copy && type(copy) === 'object') {
+            const clone = src && type(src) === 'object' ? src : {}
+
+            defaultOpt[name] = extend(clone, copy);
+        } else if (typeof copy !== 'undefined') {
+            defaultOpt[name] = copy;
+        }
+    }
+
+    return defaultOpt;
+}
+```
+
+上面会改写 `defaultOpt`，需要复制一份就行 
+
+```js
+export function  extend(defaultOpt, customOpt) {
+    defaultOpt = clone(defaultOpt);
+    // ...
+    return defaultOpt;
+}
+
+function leftpad(str, opt) {
+    opt = extend({ len: { min: 1, max: 10 }, char: '0' }, opt);
+}
+
+leftpad('a', { len: { max: 5 } }); // min 仍存在
+```
+
+## 深层数据
+
+常用的数据结构：
+
+- 数组：有序数据
+
+- 对象：无序数据
+
+对象数据的深层读取存在问题，过深的数据会其中一个属性为 `undefined` 出现错误
+
+```js
+const tree = {
+    // left: { a: 1 },
+    right: { b: 2 }
+}
+console.log(tree.left || tree.left.a)
+```
+
+层级越多，越不好判断
+
+```js
+tree.left || tree.left.left || tree.left.left.left || tree.left.left.left.left.a
+```
+
+在 `TypeScript` 中可以使用可选操作符 `?` 解决
+
+在 ES2020 引入可选链操作符 `?`
+
+```js
+tree.left?.a
+```
+
+存在兼容性需要使用 Babel 转换代码，转换后的示例代码
+
+```js
+var _tree$left;
+var tree = {
+    right: { b: 2 }
+}
+
+(_tree$left = tree.left) === null || _tree$left === void 0 ? void 0 : _tree$left.a
+```
+
+赋值存在问题，表达式左边的值存在可选链操作符时，执行代码会报错。一般比较简单的思路是把判空操作符提取到上层的判断中
+
+```js
+if (tree.left?.left) {
+    tree.left.left.a = 1
+}
+```
+
+存在缺陷，父路径不存在，不会进行赋值操作。
+
+### 设计函数
+
+```js
+export function setany(obj, path, val) {}
+
+const tree = {
+    right: { b: 2 }
+}
+setany(tree, 'left.a', 1); // tree.left.a = 1
+```
+
+思路：解析 `path`，遍历判断每一层是否存在，如果不存在，则自动创建空对象作为容器。
+
+```js
+export function setany(obj, path, val) {
+    const keys = path.split('.');
+    const root = keys.slice(0, -1).reduce((parent, subkey) => {
+        return (parent[subkey] = parent[subkey] ? parent[subkey] : {});
+    }, obj);
+
+    root[keys[keys.length - 1]] = val;
+}
+```
+
+存在数据层级中存在数组的话，就会被错误的初始化对象，这个不支持数组。
+
+```js
+const tree = {}
+setany(tree, 'arr.1', 1) // 希望 { arr: [1] } 实际得到 { arr: { 1: 1 } }
+```
+
+如何区分？
+
+```js
+const tree = {}
+setany(tree, 'arr[].1', 1) // { arr: [1] }
+```
+
+改造示例代码
+
+```js
+function parseKey(key) {
+    return key.replace('[]', '');
+}
+
+export function setany(obj, path, val) {
+    const keys = path.split('.');
+    const root = keys.slice(0, -1).reduce((parent, subkey) => {
+        const realkey = parseKey(subkey);
+        // 健值是 a.b[].c 情况，需判断 b[] 表示数组
+        return (parent[realkey] = parent[realkey] ? parent[realkey] : subkey.includes('[]') ? [] : {});
+    }, obj);
+
+    root[keys[keys.length - 1]] = val;
+}
+
+```
+
+基本的数据结构可以支持。
+
+读取数据操作
+
+```js
+export function getany(obj, path) {
+    return path.split('.').reduce((prev, subkey) => {
+        return prev == null ? prev : prev[parseKey(subkey)];
+    }, obj);
+}
 ```
