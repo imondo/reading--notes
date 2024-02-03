@@ -1,0 +1,23 @@
+{
+  "name": "chapter05",
+  "version": "1.0.0",
+  "description": "## 使用 Vue 处理 SFC",
+  "main": "index.js",
+  "scripts": {
+    "build": "npx webpack"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "css-loader": "^6.9.1",
+    "html-webpack-plugin": "^5.6.0",
+    "vue-loader": "^15.11.1",
+    "vue-template-compiler": "^2.7.16",
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "vue": "^2.7.0"
+  }
+}
