@@ -1,0 +1,26 @@
+{
+  "name": "test-lib",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/main.js",
+  "module": "src/index.js",
+  "scripts": {
+    "prepublishOnly": "webpack --mode=production"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webpack": "^5.90.1",
+    "webpack-cli": "^5.1.4"
+  },
+  "dependencies": {
+    "-": "^0.0.1",
+    "css-loader": "^6.10.0",
+    "lodash": "^4.17.21",
+    "mini-css-extract-plugin": "^2.8.0"
+  },
+  "peerDependencies": {
+    "lodash": "^4.17.21"
+  }
+}
